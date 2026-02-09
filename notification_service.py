@@ -90,6 +90,8 @@ def get_current_weekday(timezone='Asia/Kolkata'):
     return now.weekday() + 1  # Python weekday is 0-6, we need 1-7
 
 
+from google.cloud.firestore_v1.base_query import FieldFilter
+
 def get_all_users_with_tokens():
     """Get all users who have FCM tokens and selected courses"""
     try:
@@ -97,7 +99,7 @@ def get_all_users_with_tokens():
         users_ref = firestore_db.collection('users')
         
         # Get users with FCM tokens
-        users = users_ref.where('fcmToken', '!=', '').stream()
+        users = users_ref.where(filter=FieldFilter('fcmToken', '!=', '')).stream()
         
         user_list = []
         for user in users:
