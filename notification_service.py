@@ -308,9 +308,9 @@ def check_and_send_notifications(timezone='Asia/Kolkata'):
                 title = f"📚 {course_name} in {notification_minutes_before} minutes!"
                 body_parts = [f"{full_course_name}" if full_course_name != course_name else ""]
                 if classroom:
-                    body_parts.append(f"Room: {classroom}")
+                    body_parts.append(f"{classroom}")
                 if faculty:
-                    body_parts.append(f"Prof: {faculty}")
+                    body_parts.append(f"{faculty}")
                 body_parts.append(f"Starts at {start_time}")
                 
                 body = " • ".join([p for p in body_parts if p])
