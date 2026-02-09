@@ -57,7 +57,7 @@ If you didn't request this code, please ignore this email.
         .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
         .logo {{ text-align: center; margin-bottom: 30px; }}
         .logo h1 {{ color: #172C3D; font-size: 28px; margin: 0; }}
-        .otp-box {{ background: linear-gradient(135deg, #284E6D, #172C3D); color: white; font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 20px 40px; border-radius: 12px; text-align: center; margin: 30px 0; }}
+        .otp-box {{ background: #172C3D; color: #FFFFFF !important; font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 20px 40px; border-radius: 12px; text-align: center; margin: 30px 0; }}
         .message {{ color: #666; font-size: 14px; line-height: 1.6; text-align: center; }}
         .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px; }}
         .expiry {{ color: #e74c3c; font-weight: 500; }}
@@ -70,11 +70,11 @@ If you didn't request this code, please ignore this email.
         </div>
         <p class="message">Hi there! 👋</p>
         <p class="message">Use the following code to verify your email:</p>
-        <div class="otp-box">{otp}</div>
+        <div class="otp-box" style="background-color: #172C3D; color: #FFFFFF; font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 20px 40px; border-radius: 12px; text-align: center; margin: 30px 0;">{otp}</div>
         <p class="message expiry">This code expires in {OTP_EXPIRY_MINUTES} minutes.</p>
         <p class="message">If you didn't request this code, you can safely ignore this email.</p>
         <div class="footer">
-            <p>© 2024 nextClass. All rights reserved.</p>
+            <p>© 2023 nextClass. All rights reserved.</p>
         </div>
     </div>
 </body>
