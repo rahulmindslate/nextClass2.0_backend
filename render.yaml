@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: nextclass-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: FIREBASE_CREDENTIALS
+        sync: false
+      - key: FIREBASE_DATABASE_URL
+        value: https://nextclass2-9a51f-default-rtdb.firebaseio.com
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 465
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
