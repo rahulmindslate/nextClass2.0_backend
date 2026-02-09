@@ -279,6 +279,12 @@ try:
     
     if firebase_initialized:
         print("✅ Firebase initialized for notifications")
+        # Auto-start scheduler (works with gunicorn on Railway too)
+        try:
+            notification_scheduler = start_scheduler()
+            print("🚀 Notification scheduler auto-started")
+        except Exception as e:
+            print(f"⚠️ Failed to auto-start scheduler: {e}")
 except ImportError as e:
     print(f"⚠️ Notification service not available: {e}")
     firebase_initialized = False
