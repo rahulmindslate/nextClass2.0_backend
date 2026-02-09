@@ -116,7 +116,39 @@ If you didn't request this code, please ignore this email.
         return True
     except Exception as e:
         print(f"Email error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
+
+
+@app.route('/api/test-smtp', methods=['GET'])
+def test_smtp():
+    """Debug endpoint to test SMTP connection"""
+    import traceback
+    results = []
+    
+    # Test 1: SSL on port 465
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
+            server.login(EMAIL_USER, EMAIL_PASSWORD)
+            results.append({'port': 465, 'method': 'SSL', 'status': 'success'})
+    except Exception as e:
+        results.append({'port': 465, 'method': 'SSL', 'status': 'failed', 'error': str(e)})
+    
+    # Test 2: TLS on port 587
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
+            server.starttls()
+            server.login(EMAIL_USER, EMAIL_PASSWORD)
+            results.append({'port': 587, 'method': 'TLS', 'status': 'success'})
+    except Exception as e:
+        results.append({'port': 587, 'method': 'TLS', 'status': 'failed', 'error': str(e)})
+    
+    return jsonify({
+        'email_user': EMAIL_USER,
+        'email_port': EMAIL_PORT,
+        'results': results
+    })
 
 
 @app.route('/api/send-otp', methods=['POST'])
