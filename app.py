@@ -2,9 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import random
 import string
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
@@ -17,11 +15,8 @@ CORS(app)
 # In-memory OTP storage (use Redis in production)
 otp_storage = {}
 
-# Brevo SMTP configuration
-BREVO_SMTP_SERVER = os.getenv('BREVO_SMTP_SERVER', 'smtp-relay.brevo.com')
-BREVO_SMTP_PORT = int(os.getenv('BREVO_SMTP_PORT', 587))
-BREVO_SMTP_LOGIN = os.getenv('BREVO_SMTP_LOGIN', '')
-BREVO_SMTP_PASSWORD = os.getenv('BREVO_SMTP_PASSWORD', '')
+# Brevo API configuration
+BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')
 EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'nextClass')
 EMAIL_FROM_ADDRESS = os.getenv('EMAIL_FROM_ADDRESS', 'dev.mindslate@gmail.com')
 
@@ -37,7 +32,7 @@ def generate_otp():
 
 
 def send_email(to_email, otp):
-    """Send OTP email using Brevo API"""
+    """Send OTP email using Brevo HTTP API"""
     try:
         # Plain text version
         text_content = f"""
@@ -86,23 +81,32 @@ If you didn't request this code, please ignore this email.
 </html>
 """
 
-        # Build email message
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f'Your nextClass verification code: {otp}'
-        msg['From'] = f'{EMAIL_FROM_NAME} <{EMAIL_FROM_ADDRESS}>'
-        msg['To'] = to_email
-        
-        msg.attach(MIMEText(text_content, 'plain'))
-        msg.attach(MIMEText(html_content, 'html'))
+        # Brevo API request
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "accept": "application/json",
+            "api-key": BREVO_API_KEY,
+            "content-type": "application/json"
+        }
+        payload = {
+            "sender": {
+                "name": EMAIL_FROM_NAME,
+                "email": EMAIL_FROM_ADDRESS
+            },
+            "to": [{"email": to_email}],
+            "subject": f"Your nextClass verification code: {otp}",
+            "htmlContent": html_content,
+            "textContent": text_content
+        }
 
-        # Send via Brevo SMTP
-        with smtplib.SMTP(BREVO_SMTP_SERVER, BREVO_SMTP_PORT, timeout=15) as server:
-            server.starttls()
-            server.login(BREVO_SMTP_LOGIN, BREVO_SMTP_PASSWORD)
-            server.sendmail(EMAIL_FROM_ADDRESS, to_email, msg.as_string())
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
         
-        print(f"✅ Email sent to {to_email} via Brevo SMTP")
-        return True
+        if response.status_code == 201:
+            print(f"✅ Email sent to {to_email} via Brevo API")
+            return True
+        else:
+            print(f"❌ Brevo API error: {response.status_code} - {response.text}")
+            return False
 
     except Exception as e:
         print(f"Email error: {e}")
@@ -113,11 +117,10 @@ If you didn't request this code, please ignore this email.
 
 @app.route('/api/test-email', methods=['GET'])
 def test_email():
-    """Debug endpoint to test Brevo SMTP configuration"""
+    """Debug endpoint to test Brevo API configuration"""
     return jsonify({
-        'brevo_smtp_server': BREVO_SMTP_SERVER,
-        'brevo_smtp_port': BREVO_SMTP_PORT,
-        'brevo_smtp_login_set': bool(BREVO_SMTP_LOGIN),
+        'brevo_api_key_set': bool(BREVO_API_KEY),
+        'brevo_api_key_preview': BREVO_API_KEY[:8] + '...' if BREVO_API_KEY else '',
         'from_name': EMAIL_FROM_NAME,
         'from_email': EMAIL_FROM_ADDRESS
     })
