@@ -2,9 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import random
 import string
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
@@ -17,12 +15,10 @@ CORS(app)
 # In-memory OTP storage (use Redis in production)
 otp_storage = {}
 
-# Email configuration - Update these with your email credentials
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-EMAIL_USER = os.getenv('EMAIL_USER', '')  # Your email
-EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', '')  # App password for Gmail
-EMAIL_FROM = os.getenv('EMAIL_FROM', 'nextClass <noreply@nextclass.app>')
+# Brevo (formerly Sendinblue) configuration
+BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')
+EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'nextClass')
+EMAIL_FROM_ADDRESS = os.getenv('EMAIL_FROM_ADDRESS', 'dev.mindslate@gmail.com')
 
 # OTP Configuration
 OTP_LENGTH = 4
@@ -36,15 +32,10 @@ def generate_otp():
 
 
 def send_email(to_email, otp):
-    """Send OTP email to user"""
+    """Send OTP email using Brevo API"""
     try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f'Your nextClass verification code: {otp}'
-        msg['From'] = EMAIL_FROM
-        msg['To'] = to_email
-
         # Plain text version
-        text = f"""
+        text_content = f"""
 Hi there!
 
 Your verification code for nextClass is: {otp}
@@ -57,7 +48,7 @@ If you didn't request this code, please ignore this email.
 """
 
         # HTML version
-        html = f"""
+        html_content = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -90,30 +81,33 @@ If you didn't request this code, please ignore this email.
 </html>
 """
 
-        part1 = MIMEText(text, 'plain')
-        part2 = MIMEText(html, 'html')
-        msg.attach(part1)
-        msg.attach(part2)
+        # Brevo API request
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "accept": "application/json",
+            "api-key": BREVO_API_KEY,
+            "content-type": "application/json"
+        }
+        payload = {
+            "sender": {
+                "name": EMAIL_FROM_NAME,
+                "email": EMAIL_FROM_ADDRESS
+            },
+            "to": [{"email": to_email}],
+            "subject": f"Your nextClass verification code: {otp}",
+            "htmlContent": html_content,
+            "textContent": text_content
+        }
 
-        # Send email - try SSL (port 465) first, fallback to TLS (port 587)
-        try:
-            if int(EMAIL_PORT) == 465:
-                with smtplib.SMTP_SSL(EMAIL_HOST, int(EMAIL_PORT), timeout=15) as server:
-                    server.login(EMAIL_USER, EMAIL_PASSWORD)
-                    server.sendmail(EMAIL_USER, to_email, msg.as_string())
-            else:
-                with smtplib.SMTP(EMAIL_HOST, int(EMAIL_PORT), timeout=15) as server:
-                    server.starttls()
-                    server.login(EMAIL_USER, EMAIL_PASSWORD)
-                    server.sendmail(EMAIL_USER, to_email, msg.as_string())
-        except Exception as smtp_err:
-            print(f"Primary SMTP failed: {smtp_err}, trying SSL fallback...")
-            # Fallback: try SSL on port 465 if TLS on 587 fails
-            with smtplib.SMTP_SSL(EMAIL_HOST, 465, timeout=15) as server:
-                server.login(EMAIL_USER, EMAIL_PASSWORD)
-                server.sendmail(EMAIL_USER, to_email, msg.as_string())
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        
+        if response.status_code == 201:
+            print(f"✅ Email sent to {to_email} via Brevo")
+            return True
+        else:
+            print(f"❌ Brevo API error: {response.status_code} - {response.text}")
+            return False
 
-        return True
     except Exception as e:
         print(f"Email error: {e}")
         import traceback
@@ -121,33 +115,13 @@ If you didn't request this code, please ignore this email.
         return False
 
 
-@app.route('/api/test-smtp', methods=['GET'])
-def test_smtp():
-    """Debug endpoint to test SMTP connection"""
-    import traceback
-    results = []
-    
-    # Test 1: SSL on port 465
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
-            server.login(EMAIL_USER, EMAIL_PASSWORD)
-            results.append({'port': 465, 'method': 'SSL', 'status': 'success'})
-    except Exception as e:
-        results.append({'port': 465, 'method': 'SSL', 'status': 'failed', 'error': str(e)})
-    
-    # Test 2: TLS on port 587
-    try:
-        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
-            server.starttls()
-            server.login(EMAIL_USER, EMAIL_PASSWORD)
-            results.append({'port': 587, 'method': 'TLS', 'status': 'success'})
-    except Exception as e:
-        results.append({'port': 587, 'method': 'TLS', 'status': 'failed', 'error': str(e)})
-    
+@app.route('/api/test-email', methods=['GET'])
+def test_email():
+    """Debug endpoint to test Brevo email configuration"""
     return jsonify({
-        'email_user': EMAIL_USER,
-        'email_port': EMAIL_PORT,
-        'results': results
+        'brevo_api_key_set': bool(BREVO_API_KEY),
+        'from_name': EMAIL_FROM_NAME,
+        'from_email': EMAIL_FROM_ADDRESS
     })
 
 
