@@ -97,18 +97,19 @@ If you didn't request this code, please ignore this email.
 
         # Send email - try SSL (port 465) first, fallback to TLS (port 587)
         try:
-            if EMAIL_PORT == 465:
-                with smtplib.SMTP_SSL(EMAIL_HOST, EMAIL_PORT, timeout=10) as server:
+            if int(EMAIL_PORT) == 465:
+                with smtplib.SMTP_SSL(EMAIL_HOST, int(EMAIL_PORT), timeout=15) as server:
                     server.login(EMAIL_USER, EMAIL_PASSWORD)
                     server.sendmail(EMAIL_USER, to_email, msg.as_string())
             else:
-                with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT, timeout=10) as server:
+                with smtplib.SMTP(EMAIL_HOST, int(EMAIL_PORT), timeout=15) as server:
                     server.starttls()
                     server.login(EMAIL_USER, EMAIL_PASSWORD)
                     server.sendmail(EMAIL_USER, to_email, msg.as_string())
-        except Exception:
+        except Exception as smtp_err:
+            print(f"Primary SMTP failed: {smtp_err}, trying SSL fallback...")
             # Fallback: try SSL on port 465 if TLS on 587 fails
-            with smtplib.SMTP_SSL(EMAIL_HOST, 465, timeout=10) as server:
+            with smtplib.SMTP_SSL(EMAIL_HOST, 465, timeout=15) as server:
                 server.login(EMAIL_USER, EMAIL_PASSWORD)
                 server.sendmail(EMAIL_USER, to_email, msg.as_string())
 
