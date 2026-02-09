@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
 import os
+import json
 import logging
 
 # Configure logging
@@ -19,9 +20,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize Firebase Admin SDK
-# You need to download your service account key from Firebase Console
-# Go to: Project Settings > Service Accounts > Generate new private key
-# Save it as 'serviceAccountKey.json' in the backend folder
+# Option 1: Use FIREBASE_CREDENTIALS env var (for Railway/cloud hosting - paste the full JSON)
+# Option 2: Use serviceAccountKey.json file (for local development)
 
 SERVICE_ACCOUNT_PATH = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', 'serviceAccountKey.json')
 DATABASE_URL = os.getenv('FIREBASE_DATABASE_URL', 'https://nextclass2-9a51f-default-rtdb.firebaseio.com')
@@ -30,10 +30,20 @@ DATABASE_URL = os.getenv('FIREBASE_DATABASE_URL', 'https://nextclass2-9a51f-defa
 sent_notifications = set()
 
 def initialize_firebase():
-    """Initialize Firebase Admin SDK"""
+    """Initialize Firebase Admin SDK. Supports both env var and file-based credentials."""
     try:
         if not firebase_admin._apps:
-            cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+            # Try environment variable first (for Railway/cloud)
+            firebase_creds_json = os.getenv('FIREBASE_CREDENTIALS')
+            if firebase_creds_json:
+                cred_dict = json.loads(firebase_creds_json)
+                cred = credentials.Certificate(cred_dict)
+                logger.info("🔑 Using Firebase credentials from environment variable")
+            else:
+                # Fall back to file (for local development)
+                cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+                logger.info("🔑 Using Firebase credentials from file")
+            
             firebase_admin.initialize_app(cred, {
                 'databaseURL': DATABASE_URL
             })
