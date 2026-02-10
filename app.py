@@ -74,7 +74,7 @@ If you didn't request this code, please ignore this email.
         <p class="message expiry">This code expires in {OTP_EXPIRY_MINUTES} minutes.</p>
         <p class="message">If you didn't request this code, you can safely ignore this email.</p>
         <div class="footer">
-            <p>© 2023 nextClass. All rights reserved.</p>
+            <p>© 2026 nextClass. All rights reserved.</p>
         </div>
     </div>
 </body>
