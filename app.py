@@ -283,6 +283,114 @@ def health_check():
     return jsonify({'status': 'healthy', 'service': 'nextClass OTP Service'})
 
 
+@app.route('/api/check-user-exists', methods=['POST'])
+def check_user_exists():
+    """Check if a user exists in Firebase Auth by email"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').lower().strip()
+
+        if not email or '@' not in email:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid email address'
+            }), 400
+
+        # Import Firebase Auth Admin SDK
+        from firebase_admin import auth
+
+        try:
+            # Try to get user by email
+            user = auth.get_user_by_email(email)
+            
+            # Check if user signed up with Google
+            provider_data = user.provider_data
+            is_google_user = any(
+                p.provider_id == 'google.com' for p in provider_data
+            )
+            has_password = any(
+                p.provider_id == 'password' for p in provider_data
+            )
+            
+            return jsonify({
+                'success': True,
+                'exists': True,
+                'uid': user.uid,
+                'isGoogleUser': is_google_user,
+                'hasPassword': has_password,
+                'message': 'User found'
+            })
+        except auth.UserNotFoundError:
+            return jsonify({
+                'success': True,
+                'exists': False,
+                'isGoogleUser': False,
+                'hasPassword': False,
+                'message': 'User not found'
+            })
+
+    except Exception as e:
+        print(f"Error checking user: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }), 500
+
+
+@app.route('/api/get-signin-token', methods=['POST'])
+def get_signin_token():
+    """
+    Generate a custom Firebase token for email OTP sign-in.
+    This allows Google users to also sign in via email OTP.
+    IMPORTANT: Only call this AFTER OTP has been verified!
+    """
+    try:
+        data = request.get_json()
+        email = data.get('email', '').lower().strip()
+        otp_verified = data.get('otp_verified', False)
+
+        if not email or '@' not in email:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid email address'
+            }), 400
+
+        if not otp_verified:
+            return jsonify({
+                'success': False,
+                'message': 'OTP must be verified first'
+            }), 400
+
+        from firebase_admin import auth
+
+        try:
+            # Get user by email
+            user = auth.get_user_by_email(email)
+            
+            # Generate custom token for the user
+            custom_token = auth.create_custom_token(user.uid)
+            
+            return jsonify({
+                'success': True,
+                'token': custom_token.decode('utf-8'),
+                'uid': user.uid,
+                'message': 'Token generated successfully'
+            })
+        except auth.UserNotFoundError:
+            return jsonify({
+                'success': False,
+                'exists': False,
+                'message': 'User not found'
+            }), 404
+
+    except Exception as e:
+        print(f"Error generating token: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }), 500
+
+
 # ==================== NOTIFICATION SERVICE ====================
 # Import notification service
 try:
